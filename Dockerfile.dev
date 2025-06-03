@@ -1,0 +1,23 @@
+FROM python:3.12-alpine
+
+WORKDIR /app
+
+# Why is cryptg needed?: https://docs.telethon.dev/en/stable/quick-references/faq.html#file-download-is-slow-or-sending-files-takes-too-long
+# Install dependencies for cryptg
+RUN apk update && apk add --no-cache \
+	cargo \
+	rust
+
+COPY requirements.txt ./
+RUN pip3 install --no-cache-dir -r requirements.txt
+# RUN pip3 install aiohttp cryptg python-dotenv telethon websockets
+
+# Automatically restart bot on file change
+RUN apk add entr
+
+COPY . .
+
+CMD [ "sh", "-c", "find src -type f -name '*.py' | entr -n -r -c python -u src/index.py" ]
+# First list all files (recursively) ending in .py,
+#    then run entr non-interactively (-n), restart child process (-r) and clear output (-c).
+#    Note: python needs -u else print does not work
