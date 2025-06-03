@@ -21,26 +21,23 @@ jobs:
         if [[ "${{ github.event.head_commit.message }}" =~ ^Release[[:space:]]v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           tag=$(echo "${{ github.event.head_commit.message }}" | awk '{print $2}')
           echo "tag=${tag}" >> $GITHUB_OUTPUT
-          echo "create=true" >> $GITHUB_OUTPUT
-        else
-          echo "create=false" >> $GITHUB_OUTPUT
         fi
 
     - name: Create tag
-      if: steps.check-tag.outputs.create == 'true'
+      if: steps.check-tag.outputs.tag != ''
       run: |
         git tag ${{ steps.check-tag.outputs.tag }}
         git push origin ${{ steps.check-tag.outputs.tag }}
 
     - name: Generate changelog
-      if: steps.check-tag.outputs.create == 'true'
+      if: steps.check-tag.outputs.tag != ''
       run: |
         if [ ! -f CHANGELOG.md ]; then
           echo "No changelog available" >> CHANGELOG.md
         fi
 
     - name: Create release
-      if: steps.check-tag.outputs.create == 'true'
+      if: steps.check-tag.outputs.tag != ''
       uses: softprops/action-gh-release@v2
       with:
         body_path: CHANGELOG.md
