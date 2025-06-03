@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and Help
+    url: https://t.me/pokehunt_xyz
+    about: This issue tracker is for bugs only, not general support questions. Please join our Telegram group if you have any question and/or need help.
+  - name: 🚀 Feature Request
+    url: https://github.com/pokehunt-xyz/telegram/discussions/new?category=feature-requests
+    about: Remember to search for existing feature requests and "up-vote" any you like

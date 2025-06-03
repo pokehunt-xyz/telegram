@@ -1,0 +1,12 @@
+services:
+  pokehunt-telegram:
+    container_name: pokehunt-telegram
+    image: ghcr.io/pokehunt-xyz/telegram:latest
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_API_ID=${TELEGRAM_API_ID}
+      - TELEGRAM_API_HASH=${TELEGRAM_API_HASH}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - API_URL=https://api.pokehunt.xyz
+      - API_KEY=${API_KEY}
+      - API_WS_KEY=${API_WS_KEY}
