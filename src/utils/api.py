@@ -197,7 +197,6 @@ async def run_callback_command(event, client: TelegramClient, now: int) -> Comma
         raise APIError("The Pokéhunt API is offline")
 
 async def handle_command_response(client: TelegramClient, res) -> CommandResponse:
-    print(res.status)
     if res.status == 400:
         # Malformed request
         raise APIError('An invalid API request was made')
