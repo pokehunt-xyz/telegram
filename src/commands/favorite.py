@@ -9,5 +9,5 @@ async def favorite(event, client, now) -> CommandResponse:
         event,
         now,
         'favorite',
-        { id: ' '.join(args) },
+        { 'id': ' '.join(args) },
     )
