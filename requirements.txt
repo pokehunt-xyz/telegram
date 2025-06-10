@@ -1,5 +1,5 @@
-aiohttp==3.11.10
+aiohttp==3.12.12
 cryptg==0.5.0.post0
-python-dotenv==1.0.1
-Telethon==1.38.1
-websockets==14.1
+python-dotenv==1.1.0
+Telethon==1.40.0
+websockets==15.0.1
