@@ -1,3 +1,4 @@
+from telethon.errors import MessageNotModifiedError
 from telethon.errors.rpcbaseerrors import ForbiddenError
 from time import time
 
@@ -19,7 +20,7 @@ async def CallbackQuery(event, client):
     except APIError as e:
         cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description': str(e) + '. Please contact support here: https://t.me/pokehunt_xyz'}], 'files': [], 'buttons': [], 'menus': [] })
         await event.edit(cmdRes['content'])
-    except IgnoreError:
+    except (IgnoreError, MessageNotModifiedError):
         return
     except ForbiddenError as e:
         if str(e) == 'You can\'t write in this chat (caused by EditMessageRequest)':

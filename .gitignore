@@ -1,6 +1,6 @@
 .env
 __pycache__
 .mypy_cache
-.py-venv
+.venv
 *.session
 *.session-journal
