@@ -18,7 +18,7 @@ async def nickname(event, client, now) -> CommandResponse:
         now,
         'nickname',
         {
-            'id': id,
+            'id': str(id),
             'nickname': nickname,
         },
     )
