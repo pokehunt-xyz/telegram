@@ -4,13 +4,11 @@ from importlib import import_module
 from os import getenv, listdir
 from os.path import abspath, dirname, join
 from telethon import TelegramClient, events
-from telethon.errors.rpcbaseerrors import ForbiddenError
 from time import time
 
-from utils.api import chat_change, create_ws_connection, parse_command_response
-from utils.error import APIError, IgnoreError
-from utils.general import get_username, ignore_bot
-from utils.typess import APICommandResponse, APIEmbed, CommandResponse
+from utils.api import chat_change, create_ws_connection, handle_exception
+from utils.general import ignore_bot
+from utils.typess import CommandResponse
 
 load_dotenv()
 
@@ -57,31 +55,8 @@ def load_commands():
 
                 cmdRes = await command_function(event, client, now)
                 await event.reply(cmdRes['content'], file=cmdRes['files'][0] if cmdRes['files'] else None, buttons=cmdRes['buttons'] if cmdRes['buttons'] else None)
-            except APIError as e:
-                cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) + '. Please contact support here: https://t.me/pokehunt_xyz'}], 'files': [], 'buttons': [], 'menus': [] })
-                await event.reply(cmdRes['content'])
-            except IgnoreError:
-                return
-            except ForbiddenError as e:
-                if str(e) == 'You can\'t write in this chat (caused by SendMessageRequest)' or str(e) == 'You can\'t write in this chat (caused by SendMediaRequest)':
-                    pass # Bot does not have permission to send a message in chat
-                elif str(e) == 'RPCError 403: CHAT_SEND_PHOTOS_FORBIDDEN (caused by SendMediaRequest)':
-                    await event.reply('I do not have permissions to send images (of Pokémon) in here. Please make sure to give this to me!')
-                else:
-                    print('.....')
-                    print(f'An unknown ForbiddenError happened in index.py: {command_file}')
-                    print(f'Exception Type: {type(e)}')
-                    print(f'Exception Message: {str(e)}')
-                    print('.....')
-                    await event.reply('Please make sure I have enough permissions to send messages and images (of Pokémon) in here!')
             except Exception as e:
-                print('---')
-                print(f'An unknown error happened in index.py: {command_file}')
-                print(f'Exception Type: {type(e)}')
-                print(f'Exception Message: {str(e)}')
-                print('---')
-                cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description': 'An unkown error occurred (client). Please contact support here: https://t.me/pokehunt_xyz'}], 'files': [], 'buttons': [], 'menus': [] })
-                await event.reply(cmdRes['content'])
+                await handle_exception(e, event, client, f'index.py: {command_file}')
 
 def load_events():
     event_files = [

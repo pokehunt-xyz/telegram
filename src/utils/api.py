@@ -5,7 +5,7 @@ from io import BytesIO
 from json import dumps, loads
 from os import getenv
 from telethon import Button, events, TelegramClient
-from telethon.errors.rpcbaseerrors import ForbiddenError
+from telethon.errors import ForbiddenError, MessageNotModifiedError
 from typing import List, Literal
 from websockets import connect
 
@@ -69,23 +69,8 @@ async def create_ws_connection(client: TelegramClient):
                         file=toSent['files'][0] if toSent['files'] else None,
                         buttons=toSent['buttons'] if toSent['buttons'] else None,
                     )
-                except ForbiddenError as e:
-                    if str(e) == 'You can\'t write in this chat (caused by SendMessageRequest)' or str(e) == 'You can\'t write in this chat (caused by SendMediaRequest)':
-                        pass # Bot does not have permission to send a message in chat
-                    elif str(e) == 'RPCError 403: CHAT_SEND_PHOTOS_FORBIDDEN (caused by SendMediaRequest)':
-                        pass # Bot does not have permission to send media in chat
-                    else:
-                        print('.....')
-                        print(f'An unknown ForbiddenError happened in api.py')
-                        print(f'Exception Type: {type(e)}')
-                        print(f'Exception Message: {str(e)}')
-                        print('.....')
                 except Exception as e:
-                    print('---')
-                    print(f'An unknown error happened in api.py')
-                    print(f'Exception Type: {type(e)}')
-                    print(f'Exception Message: {str(e)}')
-                    print('---')
+                    handle_exception(e, None, client, 'api.py')
         except Exception as e:
             ws = None
             print('Disconnected from the Pokéhunt API, retrying in 5 secs')
@@ -286,3 +271,36 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             content = 'This message has no content'
 
     return { 'content': content, 'files': files, 'buttons': buttons, 'menus': [] }
+
+async def handle_exception(e, event, client, where):
+    msg = str(e)
+
+    if isinstance(APIError, e):
+        if event is not None:
+            cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) + '. Please contact support here: https://t.me/pokehunt_xyz'}], 'files': [], 'buttons': [], 'menus': [] })
+            await event.reply(cmdRes['content'])
+    elif isinstance(IgnoreError, e) or isinstance(MessageNotModifiedError, e):
+        return
+    elif isinstance(ForbiddenError, e):
+        if 'You can\'t write in this chat' in msg or 'CHAT_SEND_PLAIN_FORBIDDEN' in msg:
+            return # Bot does not have permission to send a message in chat
+        elif 'CHAT_SEND_PHOTOS_FORBIDDEN' in msg:
+            if event is not None:
+                await event.reply('I do not have permissions to send images (of Pokémon) in here. Please make sure to give this to me!')
+        else:
+            print('.....')
+            print(f'An unknown ForbiddenError happened in {where}')
+            print(f'Exception Type: {type(e)}')
+            print(f'Exception Message: {msg}')
+            print('.....')
+            if event is not None:
+                await event.reply('Please make sure I have enough permissions to send messages and images (of Pokémon) in here!')
+    else:
+        print('---')
+        print(f'An unknown error happened in {where}')
+        print(f'Exception Type: {type(e)}')
+        print(f'Exception Message: {msg}')
+        print('---')
+        if event is not None:
+            cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description': 'An unkown error occurred (client). Please contact support here: https://t.me/pokehunt_xyz'}], 'files': [], 'buttons': [], 'menus': [] })
+            await event.reply(cmdRes['content'])
