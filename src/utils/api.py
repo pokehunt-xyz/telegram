@@ -5,7 +5,7 @@ from io import BytesIO
 from json import dumps, loads
 from os import getenv
 from telethon import Button, events, TelegramClient
-from telethon.errors import ForbiddenError, MessageNotModifiedError
+from telethon.errors import ForbiddenError, MessageIdInvalidError, MessageNotModifiedError, PeerIdInvalidError
 from typing import List, Literal
 from websockets import connect
 
@@ -295,6 +295,11 @@ async def handle_exception(e, event, client, where):
             print('.....')
             if event is not None:
                 await event.reply('Please make sure I have enough permissions to send messages and images (of Pokémon) in here!')
+    elif isinstance(MessageIdInvalidError, e) or isinstance(PeerIdInvalidError, e):
+         if event is not None:
+                await event.reply('I could not fetch a ID!')
+    elif 'TOPIC_CLOSED' in msg:
+        return
     else:
         print('---')
         print(f'An unknown error happened in {where}')
