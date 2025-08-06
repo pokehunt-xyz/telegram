@@ -275,13 +275,13 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
 async def handle_exception(e, event, client, where):
     msg = str(e)
 
-    if isinstance(APIError, e):
+    if isinstance(e, APIError):
         if event is not None:
             cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) + '. Please contact support here: https://t.me/pokehunt_xyz'}], 'files': [], 'buttons': [], 'menus': [] })
             await event.reply(cmdRes['content'])
-    elif isinstance(IgnoreError, e) or isinstance(MessageNotModifiedError, e):
+    elif isinstance(e, IgnoreError) or isinstance(e, MessageNotModifiedError):
         return
-    elif isinstance(ForbiddenError, e):
+    elif isinstance(e, ForbiddenError):
         if 'You can\'t write in this chat' in msg or 'CHAT_SEND_PLAIN_FORBIDDEN' in msg:
             return # Bot does not have permission to send a message in chat
         elif 'CHAT_SEND_PHOTOS_FORBIDDEN' in msg:
@@ -295,7 +295,7 @@ async def handle_exception(e, event, client, where):
             print('.....')
             if event is not None:
                 await event.reply('Please make sure I have enough permissions to send messages and images (of Pokémon) in here!')
-    elif isinstance(MessageIdInvalidError, e) or isinstance(PeerIdInvalidError, e):
+    elif isinstance(e, MessageIdInvalidError) or isinstance(e, PeerIdInvalidError):
          if event is not None:
                 await event.reply('I could not fetch a ID!')
     elif 'TOPIC_CLOSED' in msg:
