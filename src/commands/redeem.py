@@ -4,7 +4,7 @@ from utils.typess import CommandResponse
 async def redeem(event, client, now) -> CommandResponse:
     args = event.message.text.split()[1:]
     if len(args) == 0:
-        args.insert(0, 'info')
+        args.insert(0, 'balance')
     subcommand = args.pop(0).lower()
 
     if subcommand == 'balance':
