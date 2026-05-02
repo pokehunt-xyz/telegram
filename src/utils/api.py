@@ -1,5 +1,4 @@
-from aiohttp import ClientError, ClientSession
-from asyncio import sleep
+from asyncio import create_task, get_running_loop, sleep
 from dotenv import load_dotenv
 from io import BytesIO
 from json import dumps, loads
@@ -7,11 +6,12 @@ from os import getenv
 from telethon import Button, events, TelegramClient
 from telethon.errors import ForbiddenError, MessageIdInvalidError, MessageNotModifiedError, PeerIdInvalidError
 from typing import List, Literal
+import uuid
 from websockets import connect
 
-from utils.error import APIError, IgnoreError
+from utils.error import APIError, CustomError, IgnoreError
 from utils.general import get_entity, get_username
-from utils.typess import APICommandResponse, APITelegramWSPayloadChats, APITelegramWSPayloadSend, APITelegramWSResponse, CommandResponse
+from utils.typess import APICommandResponse, WSInvalidResponse, WSTelegramChats, WSTelegramSend, WSTelegramResponse, CommandResponse
 from utils.update_chatcount import get_bot_dialog_ids
 
 from telethon.tl.functions.channels import LeaveChannelRequest
@@ -32,6 +32,8 @@ if not API_WS_KEY:
 ws = None
 wsQueue = []
 
+pending_replies = {}  # payloadID -> {"future": Future, "timeout": Task}
+
 async def create_ws_connection(client: TelegramClient):
     global ws
     global wsQueue
@@ -50,27 +52,46 @@ async def create_ws_connection(client: TelegramClient):
 
             async for message in ws:
                 try:
-                    json: APITelegramWSResponse = loads(message)
-                    chat = await get_entity(client, int(json['chatID'])) # chatID is given as string
-                    if chat is None:
-                        raise Exception('Chat is None (not found)')
+                    json: WSTelegramResponse | WSInvalidResponse = loads(message)
 
-                    # TODO: these are always False for some reason
-                    # there is also await client.get_permissions(chat.id, await client.get_me()) but these don't include messages/media/photos
-                    # permissions = await client.get_permissions(chat)
-                    # print(permissions.send_messages)
-                    # print(permissions.send_media)
-                    # print(permissions.send_photos)
+                    if json['event'] == 'reply':
+                        if not json['payloadID'] in pending_replies:
+                            return
 
-                    toSent = await parse_command_response(client, json)
-                    await client.send_message(
-                        chat,
-                        toSent['content'],
-                        file=toSent['files'][0] if toSent['files'] else None,
-                        buttons=toSent['buttons'] if toSent['buttons'] else None,
-                    )
+                        future_info = pending_replies.pop(json['payloadID'])
+                        future_info['timeout_task'].cancel()
+                        future = future_info['future']
+
+                        if 'status' in json:
+                            if json['status'] == 400:
+                                future.set_exception(APIError('An invalid API request was made'))
+                            elif json['status'] == 401:
+                                future.set_exception(APIError('An invalid API key is provided'))
+                            else:
+                                future.set_exception(APIError(f'The API server is not responding correctly ({json.status})'))
+                        else:
+                            future.set_result(await parse_command_response(client, json))
+                    else:
+                        chat = await get_entity(client, int(json['chatID'])) # chatID is given as string
+                        if chat is None:
+                            raise Exception('Chat is None (not found)')
+
+                        # TODO: these are always False for some reason
+                        # there is also await client.get_permissions(chat.id, await client.get_me()) but these don't include messages/media/photos
+                        # permissions = await client.get_permissions(chat)
+                        # print(permissions.send_messages)
+                        # print(permissions.send_media)
+                        # print(permissions.send_photos)
+
+                        toSent = await parse_command_response(client, json)
+                        await client.send_message(
+                            chat,
+                            toSent['content'],
+                            file=toSent['files'][0] if toSent['files'] else None,
+                            buttons=toSent['buttons'] if toSent['buttons'] else None,
+                        )
                 except Exception as e:
-                    handle_exception(e, None, client, 'api.py')
+                    await handle_exception(e, None, client, 'api.py')
         except Exception as e:
             ws = None
             print('Disconnected from the Pokéhunt API, retrying in 5 secs')
@@ -80,7 +101,7 @@ async def user_sent_message(user_id: int, user_name: str, chat_id: int):
     global ws
     global wsQueue
 
-    to_send: APITelegramWSPayloadSend = {
+    to_send: WSTelegramSend = {
         'platform': "telegram",
         'event': "send",
         'userID': str(user_id),
@@ -124,7 +145,7 @@ async def chat_change(client, event: Literal['added'] | Literal['removed'], id: 
             # If bot is removed from Channel (mega group) or Channel is deleted, the client.get_entity throws an error
             pass
 
-    to_send: APITelegramWSPayloadChats = {
+    to_send: WSTelegramChats = {
         'platform': 'telegram',
         'event': event,
         'id': str(id),
@@ -140,9 +161,11 @@ async def chat_change(client, event: Literal['added'] | Literal['removed'], id: 
 async def run_command(client: TelegramClient, event: events.NewMessage, now: int, command: str, args: list) -> CommandResponse:
     user = await event.get_sender()
 
-    url = f"{API_URL}/client/command/{command}"
-    headers = {"Authorization": f"{API_KEY}", "Content-Type": "application/json"}
+    payload_id = str(uuid.uuid4())
     data = {
+        'payloadID': payload_id,
+        'event': 'command',
+        'command': command,
         'platform': 'telegram',
         'userID': str(user.id),
         'userName': get_username(user),
@@ -151,54 +174,70 @@ async def run_command(client: TelegramClient, event: events.NewMessage, now: int
         'args': args,
     }
 
-    try:
-        async with ClientSession() as session:
-            async with session.post(url, json=data, headers=headers) as res:
-                return await handle_command_response(client, res)
-    except ClientError as e:
-        print(e)
-        raise APIError("The Pokéhunt API is offline")
+    # Create a future that will be awaited when the reply comes
+    loop = get_running_loop()
+    future = loop.create_future()
 
+    # Timeout after 30 seconds
+    async def timeout():
+        await sleep(30)
+        if not future.done():
+            print(f"Command {command} timed out after 30 seconds")
+            future.set_exception(CustomError('The PokéHunt API did not reply within 30 seconds, please try again'))
+            pending_replies.pop(payload_id, None)
+
+    pending_replies[payload_id] = {
+        "future": future,
+        "timeout_task": create_task(timeout())
+    }
+
+    if not ws:
+        wsQueue.append(dumps(data))
+    else:
+        await ws.send(dumps(data))
+
+    return await future  # Will await until the response resolves the future
 
 async def run_callback_command(event, client: TelegramClient, now: int) -> CommandResponse:
     user = await event.get_sender()
 
-    url = f"{API_URL}/client/callbackCommand/{event.data.decode('utf-8')}"
-    headers = {"Authorization": f"{API_KEY}", "Content-Type": "application/json"}
-    payload = {
+    payload_id = str(uuid.uuid4())
+    data = {
+        'payloadID': payload_id,
+        'event': 'callback',
+        'callback': event.data.decode('utf-8'),
         'platform': 'telegram',
-		'buttonID': event.data.decode('utf-8'),
 		'userID': str(user.id),
 		'userName': get_username(user),
 		'chatID': str(event.chat_id),
 		'timestamp': int(now * 1000),
 	}
 
-    try:
-        async with ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers) as res:
-                return await handle_command_response(client, res)
-    except ClientError:
-        raise APIError("The Pokéhunt API is offline")
+    # Create a future that will be awaited when the reply comes
+    loop = get_running_loop()
+    future = loop.create_future()
 
-async def handle_command_response(client: TelegramClient, res) -> CommandResponse:
-    if res.status == 400:
-        # Malformed request
-        raise APIError('An invalid API request was made')
-    elif res.status == 401:
-        # Invalid API key
-        raise APIError("An invalid API key is provided")
-    elif res.status == 418:
-		# Wrong user pressed button/menu, or callback is wrong/invalid
-        raise IgnoreError()
-    elif res.status != 200:
-        # Other error codes than success
-        raise APIError(f"The API server is not responding correctly ({res.status})")
+    # Timeout after 30 seconds
+    async def timeout():
+        await sleep(30)
+        if not future.done():
+            print('Callback timed out after 30 seconds')
+            future.set_exception(CustomError('The PokéHunt API did not reply within 30 seconds, please try again'))
+            pending_replies.pop(payload_id, None)
 
-    json: APICommandResponse = await res.json()
-    return await parse_command_response(client, json)
+    pending_replies[payload_id] = {
+        "future": future,
+        "timeout_task": create_task(timeout())
+    }
 
-async def parse_command_response(client: TelegramClient, json: APICommandResponse | APITelegramWSResponse) -> CommandResponse:
+    if not ws:
+        wsQueue.append(dumps(data))
+    else:
+        await ws.send(dumps(data))
+
+    return await future  # Will await until the response resolves the future
+
+async def parse_command_response(client: TelegramClient, json: APICommandResponse | WSTelegramResponse) -> CommandResponse:
     content = ""
     files = []
     buttons = []
@@ -277,7 +316,11 @@ async def handle_exception(e, event, client, where):
 
     if isinstance(e, APIError):
         if event is not None:
-            cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) + '. Please contact support here: https://t.me/pokehunt_xyz'}], 'files': [], 'buttons': [], 'menus': [] })
+            cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) + '. Please contact support here: https://t.me/pokehunt_xyz' }], 'files': [], 'buttons': [], 'menus': [] })
+            await event.reply(cmdRes['content'])
+    if isinstance(e, CustomError):
+        if event is not None:
+            cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) }], 'files': [], 'buttons': [], 'menus': [] })
             await event.reply(cmdRes['content'])
     elif isinstance(e, IgnoreError) or isinstance(e, MessageNotModifiedError):
         return

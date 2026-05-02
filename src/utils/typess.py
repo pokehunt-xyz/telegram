@@ -59,14 +59,20 @@ class APICommandResponse(TypedDict):
     menus: List[APISelectMenu]
     content: Optional[str]
 
-class APITelegramWSResponse(TypedDict):
-    event: Literal['spawn'] | Literal['levelup'] | Literal['dm']
-    chatID: str
+class WSTelegramResponse(TypedDict):
+    event: Literal['spawn'] | Literal['levelup'] | Literal['dm'] | Literal['reply']
+    chatID: Optional[str] # Only for 'spawn', 'levelup', 'dm'
+    payloadID: Optional[str] # Only for 'reply'
     embeds: List[APIEmbed]
     files: List[APIAttachment]
     buttons: List[List[APIButton]]
     menus: List[APISelectMenu]
     content: Optional[str]
+
+class WSInvalidResponse(TypedDict):
+    event: Literal['reply']
+    status: int
+    payloadID: str
 
 class APITelegramPayload(TypedDict):
     platform: Literal['telegram']
@@ -77,19 +83,36 @@ class APITelegramPayload(TypedDict):
     timestamp: int
     extra: Optional[Any]
 
-class APITelegramWSPayloadSend(TypedDict):
+class WSTelegramSend(TypedDict):
     platform: Literal['telegram']
     event: Literal['send']
     userID: str
     userName: str
     chatID: str
 
-class APITelegramWSPayloadChats(TypedDict):
+class WSTelegramChats(TypedDict):
     platform: Literal['telegram']
     event: Literal['added'] | Literal['removed']
     id: str
     name: str
     total: int
+
+class WSTelegramCommand(APITelegramPayload):
+    event: Literal['command']
+    command: str
+    payloadID: str
+
+class WSTelegramCallback(APITelegramPayload):
+    event: Literal['callback']
+    callback: str
+    payloadID: str
+
+WSTelegramPayload = (
+    WSTelegramSend
+    | WSTelegramChats
+    | WSTelegramCommand
+    | WSTelegramCallback
+)
 
 class CommandResponse(TypedDict):
     content: str
