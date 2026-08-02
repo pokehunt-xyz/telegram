@@ -1,4 +1,4 @@
 cryptg==0.6.0
 python-dotenv==1.2.2
-Telethon==1.43.2
-websockets==16.0
+Telethon==1.44.0
+websockets==17.0.1
