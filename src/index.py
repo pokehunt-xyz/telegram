@@ -15,13 +15,18 @@ load_dotenv()
 api_id = getenv('TELEGRAM_API_ID')
 api_hash = getenv('TELEGRAM_API_HASH')
 bot_token = getenv('TELEGRAM_BOT_TOKEN')
+overwrite_session_dir = getenv('OVERWRITE_SESSION_DIR')
+if overwrite_session_dir:
+    session_path = overwrite_session_dir + '/bot'
+else:
+    session_path = 'bot'
 
 if not api_id or not api_hash or not bot_token:
     raise ValueError(
         'API ID, API Hash, or Bot Token is missing. Please check your .env file.'
     )
 
-client = TelegramClient('bot', api_id, api_hash).start(bot_token=bot_token)
+client = TelegramClient(session_path, api_id, api_hash).start(bot_token=bot_token)
 
 def load_commands():
     command_files = [
@@ -54,7 +59,12 @@ def load_commands():
                 await ignore_bot(user)
 
                 cmdRes = await command_function(event, client, now)
-                await event.reply(cmdRes['content'], file=cmdRes['files'][0] if cmdRes['files'] else None, buttons=cmdRes['buttons'] if cmdRes['buttons'] else None)
+                await event.reply(
+                    cmdRes['content'],
+                    file=cmdRes['files'] if cmdRes['files'] else None,
+                    thumb=cmdRes['files'] if cmdRes['files'] else None,
+                    buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
+                )
             except Exception as e:
                 await handle_exception(e, event, client, f'index.py: {command_file}')
 

@@ -269,16 +269,18 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
                 content += f"__{embed['footer']['text']}__\n"
                 has_content = True
 
+        if 'image' in embed:
+            if not embed['image'].startswith('attachment://') and embed['image'].startswith('https://'):
+                files.append(embed['image'])
+
+        if 'thumbnail' in embed:
+            if not embed['thumbnail'].startswith('attachment://') and embed['thumbnail'].startswith('https://'):
+                files.append(embed['thumbnail'])
+
         if has_content:
             content += "\n"
 
     for file in json['files']:
-        if (
-            file['name'] == "oak.jpeg"
-            or file['name'] == "start.png"
-            or file['name'] == "balance.png"
-        ):
-            continue
         if len(file['content']['data']) == 0:
             continue
 
