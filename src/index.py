@@ -1,4 +1,4 @@
-from asyncio import create_task
+from asyncio import create_task, gather
 from dotenv import load_dotenv
 from importlib import import_module
 from os import getenv, listdir
@@ -8,6 +8,7 @@ from time import time
 
 from utils.api import chat_change, create_ws_connection, handle_exception
 from utils.general import ignore_bot
+from utils.kuma import uptime_kuma_ping
 from utils.typess import CommandResponse
 
 load_dotenv()
@@ -101,12 +102,13 @@ async def main():
 
     # Create WS connection (in background)
     ws_task = create_task(create_ws_connection(client))
+    kuma_task = create_task(uptime_kuma_ping())
 
     # DO THIS AFTER CREATING WS CONNECTION, AS IT TAKES A WHILE
     await chat_change(client, 'added', -1002302871573, 'FORCE SYNC OF COUNT TO MAKE SURE BOTINFO IS CORRECT')
 
-    # Run the bot forever
-    await ws_task
+    # Wait for both tasks to finish concurrently, but neither will ever finish
+    await gather(ws_task, kuma_task)
 
 with client:
     print('Restarted!')
