@@ -312,7 +312,8 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             content = 'This message has no content'
 
     # Collapse to a single file
-    files = files[0]
+    if len(files) > 0:
+        files = files[0]
 
     return { 'content': content, 'files': files, 'buttons': buttons, 'menus': [] }
 
