@@ -24,7 +24,11 @@ async def NewMessage(event, client):
                     'admin',
                     {  'message': event.message.text }
                 )
-                await event.reply(cmdRes['content'], file=cmdRes['files'][0] if cmdRes['files'] else None, buttons=cmdRes['buttons'] if cmdRes['buttons'] else None)
+                await event.reply(
+                    cmdRes['content'],
+                    file=cmdRes['files'] if cmdRes['files'] else None,
+                    buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
+                )
             except Exception as e:
                 cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description': e }], 'files': [], 'buttons': [], 'menus': [] })
                 await event.reply(cmdRes['content'])

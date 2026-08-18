@@ -13,6 +13,10 @@ async def CallbackQuery(event, client):
         await ignore_bot(user)
 
         cmdRes = await run_callback_command(event, client, now)
-        await event.edit(cmdRes['content'], file=cmdRes['files'][0] if cmdRes['files'] else None, buttons=cmdRes['buttons'] if cmdRes['buttons'] else None)
+        await event.edit(
+            cmdRes['content'],
+            file=cmdRes['files'] if cmdRes['files'] else None,
+            buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
+        )
     except Exception as e:
         await handle_exception(e, event, client, 'CallbackQuery.py')

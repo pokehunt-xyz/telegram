@@ -87,7 +87,7 @@ async def create_ws_connection(client: TelegramClient):
                         await client.send_message(
                             chat,
                             toSent['content'],
-                            file=toSent['files'][0] if toSent['files'] else None,
+                            file=toSent['files'] if toSent['files'] else None,
                             buttons=toSent['buttons'] if toSent['buttons'] else None,
                         )
                 except Exception as e:
@@ -311,9 +311,8 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
         else:
             content = 'This message has no content'
 
-    # Telegram does not support sending more than 1 file and buttons, so we collapse to single file
-    if len(buttons) > 0 and len(files) > 0:
-        files = files[0] # also collapse to single entry instead of array
+    # Collapse to a single file
+    files = files[0]
 
     return { 'content': content, 'files': files, 'buttons': buttons, 'menus': [] }
 
