@@ -270,11 +270,11 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
                 has_content = True
 
         if 'image' in embed:
-            if not embed['image'].startswith('attachment://') and embed['image'].startswith('https://'):
+            if embed['image'].startswith('https://'):
                 files.append(embed['image'])
 
         if 'thumbnail' in embed:
-            if not embed['thumbnail'].startswith('attachment://') and embed['thumbnail'].startswith('https://'):
+            if embed['thumbnail'].startswith('https://'):
                 files.append(embed['thumbnail'])
 
         if has_content:
@@ -310,6 +310,10 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             content = 'Press any of the buttons below'
         else:
             content = 'This message has no content'
+
+    # Telegram does not support sending more than 1 file and buttons, so we collapse to single file
+    if len(buttons) > 0 and len(files) > 0:
+        files = files[0] # also collapse to single entry instead of array
 
     return { 'content': content, 'files': files, 'buttons': buttons, 'menus': [] }
 
