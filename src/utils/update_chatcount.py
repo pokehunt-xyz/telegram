@@ -34,7 +34,8 @@ async def cache_all_bot_chats(client, state, total_pts):
             elif isinstance(response, types.updates.DifferenceTooLong):
                 bottom = state['pts']
                 top = response.pts
-                state, found_pts = await search_pts(client, bottom, found_pts)
+                # BEFORE: await search_pts(client, bottom, found_pts)
+                state, found_pts = await search_pts(client, state, found_pts)
         except Exception as e:
             return print(f'Error getting difference: {type(e)}: {e}')
         # print(f'Fetching peers {(state["pts"] / total_pts) * 100:0.2f}%', flush=True, end='\r')

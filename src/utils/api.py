@@ -56,7 +56,7 @@ async def create_ws_connection(client: TelegramClient):
 
                     if json['event'] == 'reply':
                         if not json['payloadID'] in pending_replies:
-                            return
+                            continue
 
                         future_info = pending_replies.pop(json['payloadID'])
                         future_info['timeout_task'].cancel()
@@ -304,7 +304,6 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
         buttons.append(row)
 
     # Ignore menu's since Telegram does not support that
-
     if content == '':
         if len(buttons) > 0:
             content = 'Press any of the buttons below'
