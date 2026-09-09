@@ -67,8 +67,9 @@ async def create_ws_connection(client: TelegramClient):
                                 future.set_exception(APIError('An invalid API request was made'))
                             elif json['status'] == 401:
                                 future.set_exception(APIError('An invalid API key is provided'))
-                            else:
-                                future.set_exception(APIError(f'The API server is not responding correctly ({json.status})'))
+                            elif json['status'] == 418:
+                                # The wrong user pressed the button, so we can just ignore it
+                                continue
                         else:
                             future.set_result(await parse_command_response(client, json))
                     else:
@@ -94,6 +95,7 @@ async def create_ws_connection(client: TelegramClient):
                     await handle_exception(e, None, client, 'api.py')
         except Exception as e:
             ws = None
+            print(e)
             print('Disconnected from the Pokéhunt API, retrying in 5 secs')
             await sleep(5)
 
@@ -281,6 +283,10 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             content += "\n"
 
     for file in json['files']:
+        if file.startswith('https://'):
+            files.append(file)
+            continue
+
         if len(file['content']['data']) == 0:
             continue
 
