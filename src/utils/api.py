@@ -283,8 +283,9 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             content += "\n"
 
     for file in json['files']:
-        if file.startswith('https://'):
-            files.append(file)
+        if isinstance(file, str):
+            if file.startswith('https://'):
+                files.append(file)
             continue
 
         if len(file['content']['data']) == 0:
