@@ -283,19 +283,22 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             content += "\n"
 
     for file in json['files']:
-        if isinstance(file, str):
-            if file.startswith('https://'):
-                files.append(file)
-            continue
+        if 'url' in file:
+            if file['url'].startswith('https://'):
+                files.append(file['url'])
 
-        if len(file['content']['data']) == 0:
-            continue
+        elif 'content' in file:
+            if len(file['content']['data']) == 0:
+                continue
 
-        uploaded_file = await client.upload_file(
-            BytesIO(bytes(file['content']['data'])),
-            file_name=file['name']
-        )
-        files.append(uploaded_file)
+            uploaded_file = await client.upload_file(
+                BytesIO(bytes(file['content']['data'])),
+                file_name=file['name']
+            )
+            files.append(uploaded_file)
+
+        else:
+            print('Invalid file format in API response')
 
     for buttonRow in json['buttons']:
         row = []
