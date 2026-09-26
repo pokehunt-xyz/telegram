@@ -1,3 +1,4 @@
+from telethon.errors import WebpageCurlFailedError
 from time import time
 
 from utils.api import run_callback_command, handle_exception
@@ -16,6 +17,11 @@ async def CallbackQuery(event, client):
         await event.edit(
             cmdRes['content'],
             file=cmdRes['files'] if cmdRes['files'] else None,
+            buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
+        )
+    except WebpageCurlFailedError:
+        await event.edit(
+            cmdRes['content'],
             buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
         )
     except Exception as e:

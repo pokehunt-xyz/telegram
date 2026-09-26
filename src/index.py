@@ -4,6 +4,7 @@ from importlib import import_module
 from os import getenv, listdir
 from os.path import abspath, dirname, join
 from telethon import TelegramClient, events
+from telethon.errors import WebpageCurlFailedError
 from time import time
 
 from utils.api import chat_change, create_ws_connection, handle_exception
@@ -64,6 +65,11 @@ def load_commands():
                     cmdRes['content'],
                     file=cmdRes['files'] if cmdRes['files'] else None,
                     thumb=cmdRes['files'] if cmdRes['files'] else None,
+                    buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
+                )
+            except WebpageCurlFailedError:
+                await event.reply(
+                    cmdRes['content'],
                     buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
                 )
             except Exception as e:
