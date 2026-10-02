@@ -4,7 +4,7 @@ from importlib import import_module
 from os import getenv, listdir
 from os.path import abspath, dirname, join
 from telethon import TelegramClient, events
-from telethon.errors import WebpageCurlFailedError
+from telethon.errors import FloodWaitError, WebpageCurlFailedError
 from time import time
 
 from utils.api import chat_change, create_ws_connection, handle_exception
@@ -67,11 +67,22 @@ def load_commands():
                     thumb=cmdRes['files'] if cmdRes['files'] else None,
                     buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
                 )
+
+            # If we can not fetch the image, we can still send the buttons and text
             except WebpageCurlFailedError:
                 await event.reply(
                     cmdRes['content'],
                     buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
                 )
+
+            # If we get a FloodWaitError, we can just ignore it
+            except FloodWaitError as e:
+                print(f'-- FloodWaitError: {e.seconds} seconds --')
+                print(f'Exception Type: {type(e)}')
+                print(f'Exception Message: {str(e)}')
+                # Wait until the ratelimit is over
+                # await asyncio.sleep(e.seconds)
+
             except Exception as e:
                 await handle_exception(e, event, client, f'index.py: {command_file}')
 
