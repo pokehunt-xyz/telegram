@@ -69,7 +69,7 @@ async def create_ws_connection(client: TelegramClient):
                                 future.set_exception(APIError('An invalid API key is provided'))
                             elif json['status'] == 418:
                                 # The wrong user pressed the button, so we can just ignore it
-                                continue
+                                future.set_exception(IgnoreError('The wrong user pressed the button'))
                         else:
                             future.set_result(await parse_command_response(client, json))
                     else:
