@@ -45,6 +45,7 @@ async def CallbackQuery(event, client):
             file=cmdRes['files'] if cmdRes['files'] else None,
             buttons=cmdRes['buttons'] if cmdRes['buttons'] else None
         )
+    # If we can not fetch the image, we can still send the buttons and text
     except WebpageCurlFailedError:
         await event.edit(
             cmdRes['content'],

@@ -4,7 +4,7 @@ from io import BytesIO
 from json import dumps, loads
 from os import getenv
 from telethon import Button, events, TelegramClient
-from telethon.errors import ForbiddenError, MessageIdInvalidError, MessageNotModifiedError, PeerIdInvalidError
+from telethon.errors import ForbiddenError, MessageIdInvalidError, MessageNotModifiedError, PeerIdInvalidError, WebpageCurlFailedError
 from typing import List, Literal
 import uuid
 from websockets import connect
@@ -84,13 +84,22 @@ async def create_ws_connection(client: TelegramClient):
                         # print(permissions.send_media)
                         # print(permissions.send_photos)
 
-                        toSent = await parse_command_response(client, json)
-                        await client.send_message(
-                            chat,
-                            toSent['content'],
-                            file=toSent['files'] if toSent['files'] else None,
-                            buttons=toSent['buttons'] if toSent['buttons'] else None,
-                        )
+                        try:
+                            toSent = await parse_command_response(client, json)
+                            await client.send_message(
+                                chat,
+                                toSent['content'],
+                                file=toSent['files'] if toSent['files'] else None,
+                                buttons=toSent['buttons'] if toSent['buttons'] else None,
+                            )
+                        # If we can not fetch the image, we can still send the buttons and text
+                        except WebpageCurlFailedError:
+                            await client.send_message(
+                                chat,
+                                toSent['content'],
+                                buttons=toSent['buttons'] if toSent['buttons'] else None,
+                            )
+
                 except Exception as e:
                     await handle_exception(e, None, client, 'api.py')
         except Exception as e:
