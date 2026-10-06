@@ -1,4 +1,4 @@
-from asyncio import create_task, get_running_loop, sleep
+from asyncio import create_task, get_running_loop, Lock, sleep
 from dotenv import load_dotenv
 from io import BytesIO
 from json import dumps, loads
@@ -33,6 +33,51 @@ ws = None
 wsQueue = []
 
 pending_replies = {}  # payloadID -> {"future": Future, "timeout": Task}
+
+# Keep global variable of group IDs
+# Note that this excludes private chats/DMs
+group_ids: set[int] = set()
+group_ids_lock = Lock()
+async def update_group_ids(client: TelegramClient):
+    global group_ids
+
+    while True:
+        try:
+            chats = await get_bot_dialog_ids(client)
+            async with group_ids_lock:
+                group_ids = {c for c in chats if c < 0}
+
+            # Notify websocket of updated group count
+            await chat_change(client, 'added', -1002302871573, 'FORCE SYNC OF COUNT TO MAKE SURE BOTINFO IS CORRECT')
+        except Exception as e:
+            print(f"Error updating group IDs: {type(e)}: {e}")
+        await sleep(60 * 60) # Update every hour
+
+    # chats = await get_bot_dialog_ids(client)
+    # for groupID in [c for c in chats if c < 0]:
+    #     try:
+    #         group = await client.get_entity(groupID)
+    #         if isinstance(group, ChatForbidden):
+    #             continue  # If bot is removed from Chat (small group)
+
+    #         # if isinstance(group, Channel):
+    #         #     await client(LeaveChannelRequest(
+    #         #         channel=group
+    #         #     ))
+    #         #     await client.delete_dialog(group)
+    #         # elif isinstance(group, Chat):
+    #         #     await client(DeleteChatUserRequest(
+    #         #         chat_id=group.id,
+    #         #         user_id='me'
+    #         #     ))
+    #         #     await client.delete_dialog(group)
+
+    #         if not group.left and (not isinstance(group, Chat) or not group.deactivated):
+    #             group_count += 1
+    #     except:
+    #         # If bot is removed from Channel (mega group) or Channel is deleted, the client.get_entity throws an error
+    #         pass
+
 
 async def create_ws_connection(client: TelegramClient):
     global ws
@@ -128,40 +173,25 @@ async def user_sent_message(user_id: int, user_name: str, chat_id: int):
 async def chat_change(client, event: Literal['added'] | Literal['removed'], id: int, name: str):
     global ws
     global wsQueue
+    global group_ids
 
-    group_count = 0
+    if id > 0:
+        return
 
-    chats = await get_bot_dialog_ids(client)
-    for groupID in [c for c in chats if c < 0]:
-        try:
-            group = await client.get_entity(groupID)
-            if isinstance(group, ChatForbidden):
-                continue  # If bot is removed from Chat (small group)
 
-            # if isinstance(group, Channel):
-            #     await client(LeaveChannelRequest(
-            #         channel=group
-            #     ))
-            #     await client.delete_dialog(group)
-            # elif isinstance(group, Chat):
-            #     await client(DeleteChatUserRequest(
-            #         chat_id=group.id,
-            #         user_id='me'
-            #     ))
-            #     await client.delete_dialog(group)
-
-            if not group.left and (not isinstance(group, Chat) or not group.deactivated):
-                group_count += 1
-        except:
-            # If bot is removed from Channel (mega group) or Channel is deleted, the client.get_entity throws an error
-            pass
+    async with group_ids_lock:
+        if event == 'added':
+            group_ids.add(id)
+        elif event == 'removed':
+            group_ids.remove(id)
+        total = len(group_ids)
 
     to_send: WSTelegramChats = {
         'platform': 'telegram',
         'event': event,
         'id': str(id),
         'name': name,
-        'total': group_count
+        'total': total
     }
 
     if not ws:
@@ -342,7 +372,7 @@ async def handle_exception(e, event, client, where):
         if event is not None:
             cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) + '. Please contact support here: https://t.me/pokehunt_xyz' }], 'files': [], 'buttons': [], 'menus': [] })
             await event.reply(cmdRes['content'])
-    if isinstance(e, CustomError):
+    elif isinstance(e, CustomError):
         if event is not None:
             cmdRes = await parse_command_response(client, { 'embeds': [{ 'title': '❌ Error!', 'color': '#FF0000', 'description':  str(e) }], 'files': [], 'buttons': [], 'menus': [] })
             await event.reply(cmdRes['content'])
