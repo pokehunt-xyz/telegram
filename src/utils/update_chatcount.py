@@ -1,4 +1,5 @@
 from telethon import TelegramClient
+from telethon.errors import InvalidBufferError
 from telethon.tl import types
 from telethon.tl.functions.updates import GetDifferenceRequest
 
@@ -10,7 +11,8 @@ async def search_pts(client, state, found_pts):
         state['pts'] = (found_pts['bottom'] + found_pts['top']) // 2
         try:
             response = await client(GetDifferenceRequest(**state))
-        except: response = None
+        except:
+            response = None
         if not response or isinstance(response, types.updates.DifferenceTooLong):
             found_pts['bottom'] = state['pts'] + 1
         else:
@@ -36,8 +38,16 @@ async def cache_all_bot_chats(client, state, total_pts):
                 top = response.pts
                 # BEFORE: await search_pts(client, bottom, found_pts)
                 state, found_pts = await search_pts(client, state, found_pts)
+
+        except InvalidBufferError as e:
+            if 'HTTP Code 429' in str(e):
+                print('Error getting difference: status code 429...')
+                return True
+            raise
         except Exception as e:
-            return print(f'Error getting difference: {type(e)}: {e}')
+            print(f'Error getting difference: {type(e)}: {e}')
+            return False
+
         # print(f'Fetching peers {(state["pts"] / total_pts) * 100:0.2f}%', flush=True, end='\r')
     # print('\nFinished')
     return True

@@ -24,10 +24,6 @@ class APIAttachment(TypedDict):
     content: APIAttachmentContent
     name: Optional[str]
 
-class APIAttachmentUrl(TypedDict):
-    url: str
-    name: Optional[str]
-
 class APIEmbed(TypedDict):
     title: Optional[str]
     fields: List[APIEmbedField]
@@ -58,7 +54,7 @@ class APISelectMenu(TypedDict):
 
 class APICommandResponse(TypedDict):
     embeds: List[APIEmbed]
-    files: List[APIAttachment | APIAttachmentUrl]
+    files: List[APIAttachment]
     buttons: List[List[APIButton]]
     menus: List[APISelectMenu]
     content: Optional[str]
@@ -68,7 +64,7 @@ class WSTelegramResponse(TypedDict):
     chatID: Optional[str] # Only for 'spawn', 'levelup', 'dm'
     payloadID: Optional[str] # Only for 'reply'
     embeds: List[APIEmbed]
-    files: List[APIAttachment | APIAttachmentUrl]
+    files: List[APIAttachment]
     buttons: List[List[APIButton]]
     menus: List[APISelectMenu]
     content: Optional[str]

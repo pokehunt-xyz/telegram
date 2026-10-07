@@ -323,6 +323,7 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
 
     for file in json['files']:
         if 'url' in file:
+            print(f"SHOULD NOT RECEIVE FILE URL: {file}")
             if file['url'].startswith('https://'):
                 files.append(file['url'])
 
