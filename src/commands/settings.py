@@ -36,6 +36,7 @@ async def settings(event, client, now) -> CommandResponse:
         subcommand == 'dmnotifications'
         or subcommand == 'levelup'
         or subcommand == 'profile'
+        or subcommand == 'username'
     ):
         setEnabled = parse_boolean(args[0]) if len(args) > 0 else None
 
