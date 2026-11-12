@@ -364,7 +364,10 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             else:
                 style = get_button_style(button['style'])
                 row.append(Button.inline(button['label'], button['id'], style=style))
-        buttons.append(row)
+
+        # Remove empty button rows
+        if len(row) > 0:
+            buttons.append(row)
 
     # Ignore menu's since Telegram does not support that
     if content == '':
