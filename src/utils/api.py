@@ -78,6 +78,18 @@ async def update_group_ids(client: TelegramClient):
     #         # If bot is removed from Channel (mega group) or Channel is deleted, the client.get_entity throws an error
     #         pass
 
+def get_button_style(style: str) -> Literal['primary', 'success', 'danger']:
+    if style == 'Primary':
+        return 'primary'
+    elif style == 'Secondary':
+        return None
+    elif style == 'Success':
+        return 'success'
+    elif style == 'Danger':
+        return 'danger'
+    else:
+        return None
+
 
 async def create_ws_connection(client: TelegramClient):
     global ws
@@ -350,7 +362,8 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
             if button['style'] == "Link":
                 row.append(Button.url(button['label'], button['id']))
             else:
-                row.append(Button.inline(button['label'], button['id']))
+                style = get_button_style(button['style'])
+                row.append(Button.inline(button['label'], button['id'], style=style))
         buttons.append(row)
 
     # Ignore menu's since Telegram does not support that

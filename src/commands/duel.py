@@ -17,7 +17,7 @@ async def duel(event, client, now) -> CommandResponse:
     if hunterTo and not(isinstance(hunterTo, User)):
         return await parse_command_response(client, { 'content': 'You need to tag a valid user! See `/help duel` for examples.', 'embeds': [], 'files': [], 'buttons': [], 'menus': [] })
 
-    x = await run_command(
+    return await run_command(
         client,
         event,
         now,
@@ -28,5 +28,3 @@ async def duel(event, client, now) -> CommandResponse:
             'taggedName': get_username(hunterTo) if hunterTo else None,
         },
     )
-    print(x)
-    return x
