@@ -310,6 +310,9 @@ async def parse_command_response(client: TelegramClient, json: APICommandRespons
 
         if 'description' in embed:
             content += f"{embed['description']}\n"
+            # Add extra newline between description and the fields
+            if 'fields' in embed and len(embed['fields']) > 0:
+                content += "\n"
             has_content = True
 
         if 'fields' in embed:
