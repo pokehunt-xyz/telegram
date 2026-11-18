@@ -78,7 +78,7 @@ async def update_group_ids(client: TelegramClient):
     #         # If bot is removed from Channel (mega group) or Channel is deleted, the client.get_entity throws an error
     #         pass
 
-def get_button_style(style: str) -> Literal['primary', 'success', 'danger']:
+def get_button_style(style: str) -> Literal['primary', 'success', 'danger', None]:
     if style == 'Primary':
         return 'primary'
     elif style == 'Secondary':
@@ -236,7 +236,7 @@ async def run_command(client: TelegramClient, event: events.NewMessage, now: int
         await sleep(30)
         if not future.done():
             print(f"Command {command} timed out after 30 seconds")
-            future.set_exception(CustomError('The PokéHunt API did not reply within 30 seconds, please try again'))
+            future.set_exception(CustomError('The PokéHunt API did not reply within 30 seconds, please try again. If this keeps happening, please contact developers in https://t.me/pokehunt_xyz'))
             pending_replies.pop(payload_id, None)
 
     pending_replies[payload_id] = {
@@ -275,7 +275,7 @@ async def run_callback_command(event, client: TelegramClient, now: int) -> Comma
         await sleep(30)
         if not future.done():
             print('Callback timed out after 30 seconds')
-            future.set_exception(CustomError('The PokéHunt API did not reply within 30 seconds, please try again'))
+            future.set_exception(CustomError('The PokéHunt API did not reply within 30 seconds, please try again. If this keeps happening, please contact developers in https://t.me/pokehunt_xyz'))
             pending_replies.pop(payload_id, None)
 
     pending_replies[payload_id] = {
