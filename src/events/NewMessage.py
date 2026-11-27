@@ -3,12 +3,15 @@ from time import time
 
 from utils.api import parse_command_response, run_command, user_sent_message
 from utils.error import IgnoreError
-from utils.general import get_username, ignore_bot
+from utils.general import chat_guard, get_username, ignore_bot
 
 async def NewMessage(event, client):
     now = time()
 
     try:
+        # Leave chats where the bot should not be (see ALLOWED_CHAT_IDS)
+        await chat_guard(event, client)
+
         # If from bot, then ignore
         user = await event.get_sender()
         await ignore_bot(user)

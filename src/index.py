@@ -8,7 +8,7 @@ from telethon.errors import FloodWaitError, WebpageCurlFailedError
 from time import time
 
 from utils.api import create_ws_connection, handle_exception, update_group_ids
-from utils.general import ignore_bot
+from utils.general import chat_guard, ignore_bot
 from utils.kuma import uptime_kuma_ping
 from utils.typess import CommandResponse
 
@@ -55,6 +55,9 @@ def load_commands():
                 if mention is not None and mention != 'xcuionuswjbhrahv_bot' and mention != 'Pokehunt_xyz_bot':
                     # Make sure we do not trigger on for example `/info@MissRose_bot`
                     return
+
+                # Leave chats where the bot should not be (see ALLOWED_CHAT_IDS)
+                await chat_guard(event, client)
 
                 # If from bot, then ignore
                 user = await event.get_sender()

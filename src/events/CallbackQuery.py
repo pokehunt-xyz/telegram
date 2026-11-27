@@ -2,7 +2,7 @@ from telethon.errors import WebpageCurlFailedError
 from time import monotonic, time
 
 from utils.api import run_callback_command, handle_exception
-from utils.general import ignore_bot
+from utils.general import ignore_bot, is_forbidden_chat
 
 # We only allow one callback per user per message
 active_callbacks: set[tuple[int, int, int]] = set()
@@ -14,6 +14,10 @@ last_callbacks: dict[int, float] = {}
 async def CallbackQuery(event, client):
     now = time()
     now_mon = monotonic()
+
+    # Ignore buttons in chats where the bot should not be (it leaves on the next message, see ALLOWED_CHAT_IDS)
+    if is_forbidden_chat(event):
+        return
 
     # If from bot, then ignore
     user = await event.get_sender()
