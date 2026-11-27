@@ -3,7 +3,8 @@ from time import time
 
 from utils.api import parse_command_response, run_command, user_sent_message
 from utils.error import IgnoreError
-from utils.general import chat_guard, get_username, ignore_bot
+from utils.allowed_chats import chat_guard
+from utils.general import get_username, ignore_bot
 
 async def NewMessage(event, client):
     now = time()

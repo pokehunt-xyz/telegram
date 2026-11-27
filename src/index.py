@@ -8,7 +8,8 @@ from telethon.errors import FloodWaitError, WebpageCurlFailedError
 from time import time
 
 from utils.api import create_ws_connection, handle_exception, update_group_ids
-from utils.general import chat_guard, ignore_bot
+from utils.allowed_chats import chat_guard
+from utils.general import ignore_bot
 from utils.kuma import uptime_kuma_ping
 from utils.typess import CommandResponse
 

@@ -2,7 +2,8 @@ from telethon.errors import WebpageCurlFailedError
 from time import monotonic, time
 
 from utils.api import run_callback_command, handle_exception
-from utils.general import ignore_bot, is_forbidden_chat
+from utils.allowed_chats import is_forbidden_chat
+from utils.general import ignore_bot
 
 # We only allow one callback per user per message
 active_callbacks: set[tuple[int, int, int]] = set()

@@ -1,7 +1,7 @@
 from telethon import events
 
 from utils.api import chat_change
-from utils.general import is_forbidden_chat, leave_chat
+from utils.allowed_chats import is_forbidden_chat, leave_chat
 
 async def ChatAction(event, client):
     for user in await event.get_users():
